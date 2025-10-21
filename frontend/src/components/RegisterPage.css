@@ -1,0 +1,102 @@
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+/* Contenedor principal centrado */
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #eaeaea;
+  padding: 20px;
+}
+
+/* Card */
+.register-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 650px;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+/* Logo y título centrados */
+.register-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.register-logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.register-title {
+  font-size: 1.5rem;
+  color: #1e2a36;
+  margin: 0;
+}
+
+/* Formulario en 2 columnas */
+.register-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 16px;   /* espacio vertical */
+  column-gap: 30px; /* espacio horizontal más amplio */
+}
+
+
+.register-form label {
+  display: block;
+  font-weight: bold;
+  color: #6518af;
+  margin-bottom: 5px;
+}
+
+.register-form input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+/* Botón ocupa las 2 columnas */
+.register-actions {
+  grid-column: span 2;
+  text-align: center;
+}
+
+.register-actions button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #ffa500;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.register-actions button:hover {
+  background: #2ECC71;
+}
+
+/* feedback visual y animación */
+.register-actions button {
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+/* botón deshabilitado cuando el formulario no es válido */
+.register-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #ffa500; /* mantiene el naranja base atenuado */
+}

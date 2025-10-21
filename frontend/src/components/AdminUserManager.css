@@ -1,0 +1,316 @@
+/* =========================================================
+   Base existente (tal cual me la enviaste)
+   ========================================================= */
+
+/* Reutiliza estilos base de tu app: mismos colores, bordes y fondos */
+
+.users-main {
+  display: block;           /* sin sidebar en esta vista */
+  padding: 20px;
+  background: #f8f8f8;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.users-panel {
+  background: #fff;
+  border: 2px dashed #2ECC71;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+/* Toolbar */
+.users-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.users-toolbar input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+/* Botones */
+.btn-primary {
+  background: #FFA500;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.btn-primary:hover {
+  background: #2ECC71;
+}
+
+.btn-secondary {
+  background: #6518af;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+.btn-secondary:hover { opacity: 0.9; }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Usamos morado para "eliminar" para mantener la paleta; si quieres, podemos poner borde rojo */
+.btn-danger {
+  background: transparent;
+  color: #6518af;
+  border: 2px solid #6518af;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+  margin-left: 8px;
+}
+.btn-danger:hover {
+  background: #6518af;
+  color: #fff;
+}
+
+/* Tabla */
+.users-table-wrapper {
+  overflow: auto;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table th, .users-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.users-table thead th {
+  background: #f3ecff;               /* leve toque morado */
+  color: #6518af;
+}
+
+.users-table select {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.col-acciones { width: 220px; }
+.acciones { white-space: nowrap; }
+
+.empty-cell {
+  text-align: center;
+  color: #666;
+  padding: 24px;
+}
+
+.sidebar-divider {
+  margin: 12px 0;
+  border-top: 1px solid #ccc;
+  opacity: 0.6;
+}
+
+.btn-gestionar-usuarios {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  background-color: #FFA500; /* naranja */
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  text-align: left;
+}
+
+.btn-gestionar-usuarios:hover {
+  background-color: #2ECC71; /* verde en hover */
+}
+
+/* =========================================================
+   Añadidos para Gestor de Contenido (buscador + modal)
+   ========================================================= */
+
+/* Fila del título y el buscador */
+.title-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.title-row h2 {
+  margin: 0;
+  color: #6518af;
+}
+
+/* Caja de búsqueda */
+.search-box {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 340px;
+}
+
+.search-box input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+}
+
+.btn-buscar {
+  background: #6518af;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.05s ease;
+}
+.btn-buscar:hover { background: #58209a; }
+.btn-buscar:active { transform: translateY(1px); }
+
+/* Contenedor con botones de acciones.
+   Cuando hay curso seleccionado añadimos clase .activo para pintarlos en verde */
+.contenedor-funcionalidades .fila-botones button {
+  background: #FFA500;  /* por defecto naranja (como tu diseño) */
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 22px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.05s ease;
+}
+.contenedor-funcionalidades .fila-botones button:hover {
+  background: #e59500;
+}
+.contenedor-funcionalidades .fila-botones .boton-salir {
+  background: #FFA500; /* mantenemos “Salir” igual */
+}
+
+/* Al seleccionar un curso, pasamos todos los botones (menos “Salir”)
+   a verde para incentivar la interacción */
+.contenedor-funcionalidades.activo .fila-botones button:not(.boton-salir) {
+  background: #2ECC71;
+}
+.contenedor-funcionalidades.activo .fila-botones button:not(.boton-salir):hover {
+  background: #27ae60;
+}
+
+/* ================= Modal de resultados ================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background: #fff;
+  width: min(720px, 92vw);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  overflow: hidden;
+  animation: modalIn 120ms ease-out;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #f3ecff;   /* acorde a la tabla morada */
+  border-bottom: 1px solid #e9e9e9;
+}
+
+.modal-head h3 {
+  margin: 0;
+  color: #6518af;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #6518af;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.modal-close:hover {
+  background: rgba(101,24,175,0.08);
+}
+
+.result-list {
+  list-style: none;
+  margin: 0;
+  padding: 12px 16px 16px;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.result-main {
+  min-width: 0;
+}
+.result-main strong { color: #333; }
+.result-main .muted {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.select-btn {
+  background: #2ECC71;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, transform 0.05s ease;
+}
+.select-btn:hover { background: #27ae60; }
+.select-btn:active { transform: translateY(1px); }
+
+.no-matches {
+  margin: 0;
+  padding: 18px 16px 22px;
+  color: #666;
+  text-align: center;
+}

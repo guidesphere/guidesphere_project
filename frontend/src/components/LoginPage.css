@@ -1,0 +1,88 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #eeeeee;
+}
+
+.login-box {
+  background-color: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.logo {
+  width: 60px;
+  margin-bottom: 20px;
+}
+
+.login-title {
+  margin-bottom: 20px;
+  color: #1e2a36;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.login-form label {
+  font-weight: bold;
+  color: #6518af;
+}
+
+.login-form input {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.login-form button {
+  background-color: #ffa500;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
+  transition: background-color 0.3s ease;
+}
+
+.login-form button:hover {
+  background-color: #2ECC71;
+}
+
+.register-button {
+  background-color: #ffa500; /* Naranja */
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 15px; /* Separación del botón Ingresar */
+  transition: background-color 0.3s ease;
+}
+
+.register-button:hover {
+  background-color: #2ECC71; /* Verde del logo */
+}
+

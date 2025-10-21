@@ -1,0 +1,124 @@
+.welcome-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background-color: #eaeaea;
+  font-family: Arial, sans-serif;
+}
+
+.welcome-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, #8643d1, #6518af, #4b1291, #6518af, #8643d1);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 16px 16px 0 0;
+}
+
+.branding {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo {
+  height: 60px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+}
+
+.titulo-centrado {
+  font-size: 1.2em;
+}
+
+.sub-header {
+  background-color: #FFA500;
+  padding: 6px 0;
+  text-align: center;
+}
+
+.sub-header h2 {
+  color: white;
+  margin: 0;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.welcome-main {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.bienvenida-box {
+  background: white;
+  border: 2px dashed #2ECC71;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 700px;
+  text-align: center;
+}
+
+.bienvenida-box h2 {
+  color: #6518af;
+  margin-bottom: 20px;
+}
+
+.bienvenida-box p {
+  color: #333;
+  font-size: 1.1em;
+  margin-bottom: 30px;
+}
+
+.boton-ingresar {
+  background-color: #FFA500;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 25px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.boton-ingresar:hover {
+  background-color: #2ECC71;
+}
+
+.admin-footer {
+  text-align: center;
+  background-color: #6518af;
+  color: white;
+  padding: 10px;
+  border-radius: 0 0 16px 16px;
+  font-size: 0.8em;
+}
+
+/* Enlace "Regístrate" en el header */
+.register-link {
+  color: #ffffff;            /* blanco por defecto para el header */
+  font-weight: bold;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  cursor: pointer;
+}
+
+.register-link:hover,
+.register-link:focus {
+  color: #2ECC71;            /* verde del logo en hover/focus */
+  outline: none;
+}

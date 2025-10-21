@@ -1,0 +1,6 @@
+backend/.env
+frontend/.env
+backend/uploads/
+node_modules/
+dist/
+.DS_Store

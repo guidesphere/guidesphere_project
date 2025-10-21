@@ -1,0 +1,164 @@
+/* Reutiliza paleta de AdminContentManager */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.search-box input {
+  width: min(560px, 65vw);
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+.btn-buscar {
+  background: #FFA500;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-buscar:hover { background: #2ECC71; }
+
+.course-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin: 16px 0 8px;
+  flex-wrap: wrap;
+}
+.badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.badge.success { background: #2ECC71; color: #fff; }
+.badge.warning { background: #FFA500; color: #fff; }
+
+.course-progress label {
+  display: block;
+  font-weight: 700;
+  color: #6518af;
+  margin-bottom: 4px;
+}
+
+/* Barra de progreso con porcentaje visible */
+.gp-progress {
+  position: relative;
+  width: 320px;
+  height: 12px;
+  background: #eee;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.gp-progress-fill {
+  height: 100%;
+  background: #2ECC71;
+}
+.gp-progress-text {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #6518af;
+  pointer-events: none;
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 12px;
+}
+@media (max-width: 920px) {
+  .panel-grid { grid-template-columns: 1fr; }
+}
+
+.panel-col h3 {
+  color: #6518af;
+  margin: 8px 0 12px;
+  text-align: left;
+}
+
+.resource-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.resource-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.resource-meta {
+  font-size: 0.9rem;
+  color: #555;
+  margin-top: 8px;
+}
+
+.btn-action {
+  background: #FFA500;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-action:hover { background: #2ECC71; }
+
+.panel-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  background: #FFA500;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-primary:hover { background: #2ECC71; }
+
+.boton-salir {
+  background-color: #6518af;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.boton-salir:hover { opacity: .9; }
+
+.muted { color: #666; }
+
+/* Espaciado para el botón "Cerrar vista" debajo del visor de video o documento */
+.content-viewer .btn-action {
+  margin-top: 16px;
+  display: inline-block;
+}
