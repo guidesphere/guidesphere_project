@@ -23,11 +23,9 @@ function LoginPage() {
 
     try {
       const data = await login({ email, password }); 
+      // Guarda el usuario (rol incluido) para el resto de la app
       // login() viene de api.js y llama al backend
-      console.log("Usuario autenticado:", data);
-
-      // Guardar el token en localStorage (ya lo hace api.js)
-      // y redirigir al área de administración
+      localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/admin");
     } catch (err) {
       console.error(err);

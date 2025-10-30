@@ -1,0 +1,94 @@
+/* Colores del proyecto */
+:root{
+  --up-orange:#FFA500;
+  --up-green:#2ECC71;
+  --up-purple:#6518af;
+  --up-gray-100:#f3f3f3;
+  --up-gray-200:#e9e9e9;
+  --up-text:#2b2b2b;
+}
+
+/* Contenedor general */
+.up-panel{ padding: 20px 22px; color: var(--up-text); }
+
+/* Encabezado */
+.up-header{ text-align:center; margin-bottom: 12px; }
+.up-title{ margin: 0; font-size: 2rem; font-weight: 800; }
+.up-subtitle{ display:block; margin-top:6px; color:#666; }
+
+/* Toolbar */
+.up-toolbar{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; flex-wrap:wrap; margin: 12px 0 16px;
+}
+.up-toolbar-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.up-input{ padding:10px 12px; border:1px solid #ccc; border-radius:8px; }
+.up-input--search{ width:min(560px, 68vw); }
+.up-select{ padding:10px 12px; border:1px solid #ccc; border-radius:8px; background:#fff; }
+
+/* Card/Tabla */
+.up-card{ background:#fff; border:1px solid var(--up-gray-200); border-radius:10px; padding:12px; }
+.up-table-wrap{ overflow-x:auto; }
+.up-table{ width:100%; border-collapse:separate; border-spacing:0 10px; }
+.up-table thead th{
+  text-align:left; padding:6px 8px; color:var(--up-purple); font-weight:800;
+}
+.up-table tbody td{ padding:6px 8px; }
+.up-input--sm{ padding:8px 10px; }
+.up-select--sm{ padding:8px 10px; }
+.up-col-actions{ width:190px; }
+
+/* Acciones alineadas en fila */
+.up-actions .up-actions-row{
+  display:flex; gap:8px; align-items:center; justify-content:flex-start;
+}
+
+/* Botones */
+.up-btn{
+  border:none; border-radius:8px; font-weight:700; cursor:pointer;
+  padding:10px 14px; background:var(--up-orange); color:#fff;
+}
+.up-btn:hover{ background:var(--up-green); }
+.up-btn--secondary{ background:var(--up-orange); }
+.up-btn--ghost{ background:#fff; color:#333; border:1px solid #ccc; }
+.up-btn--primary{ background:var(--up-orange); color:#fff; }
+.up-btn--sm{ padding:8px 12px; font-size:.9rem; }
+.up-btn--xs{ padding:6px 10px; font-size:.85rem; line-height:1; }
+
+/* Paginación */
+.up-pagination{
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  margin-top:14px; flex-wrap:wrap;
+}
+.up-page-info{ color:#555; }
+
+/* Responsive */
+@media (max-width: 920px){
+  .up-col-actions{ width:auto; }
+  .up-input--search{ width:100%; }
+}
+
+/* --- FIX botones y alineación --- */
+.up-actions .up-actions-row{
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  gap:8px !important;
+  flex-wrap:nowrap !important;     /* evita salto a 2 líneas */
+  white-space:nowrap;
+}
+.up-btn{
+  display:inline-flex !important;  /* evita display:block heredado */
+  align-items:center;
+  justify-content:center;
+}
+.up-btn--xs{
+  padding:6px 10px !important;
+  font-size:.85rem !important;
+  line-height:1 !important;
+}
+.up-table tbody td{                /* centra verticalmente inputs/botones */
+  vertical-align: middle;
+}
+.up-col-actions{ width:190px; }    /* ancho fijo para que quepan 2 botones */

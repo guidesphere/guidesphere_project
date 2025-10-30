@@ -1,5 +1,5 @@
 // src/components/AdminContentManager.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "./AdminContentManager.css";
 import logo from "../assets/logo.png";
 import fotoPerfil from "../assets/foto.png";
@@ -8,6 +8,19 @@ import { useNavigate, useLocation } from "react-router-dom";
 function AdminContentManager() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Guardado simple: si no hay token, a /login
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) navigate("/login");
+  }, [navigate]);
+
+  // Usuario actual (rol)
+  const currentUser = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("user") || "null"); }
+    catch { return null; }
+  }, []);
+  const role = currentUser?.role || "student";
 
   // ===== Estado del cajetín de búsqueda =====
   const [searchText, setSearchText] = useState("");
@@ -26,13 +39,13 @@ function AdminContentManager() {
   const handlePlayVideo = () => alert("Reproducir Video (demo)");
   const handleViewContent = () => alert("Ver Contenido del Curso (demo)");
   const handleDoExam = () => alert("Presentar Evaluación (demo)");
-
   const handleDownloadVideo = () => alert("Descargar Video (demo)");
   const handleDownloadContent = () => alert("Descargar Contenido (demo)");
   const handleDownloadCert = () => alert("Descargar Certificado (demo)");
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/login");
   };
 

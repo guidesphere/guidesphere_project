@@ -1,6 +1,9 @@
+version: "3.9"
+
 services:
   db:
     image: postgres:16-alpine
+    container_name: gsdev-db-1
     environment:
       POSTGRES_DB: guidesphere
       POSTGRES_USER: postgres
@@ -9,26 +12,49 @@ services:
       - "5433:5432"
     volumes:
       - gs_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d guidesphere"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
+    container_name: gsdev-backend-1
     env_file: ./backend/.env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
       - ./backend/uploads:/app/uploads
+    restart: unless-stopped
+
+  backend_eval:
+    build: ./backend_eval
+    container_name: gsdev-backend-eval-1
+    env_file: ./backend_eval/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8010:8000"        # FastAPI adentro → 8010 host
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       args:
         VITE_API_URL: "http://localhost:8000"
+        VITE_EVAL_URL: "http://localhost:8010"
+    container_name: gsdev-frontend-1
     depends_on:
       - backend
+      - backend_eval
     ports:
       - "5173:80"
+    restart: unless-stopped
 
 volumes:
   gs_pg:

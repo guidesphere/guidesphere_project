@@ -9,9 +9,13 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
+// Router de autenticación
+const authRouter = require("./routes/auth");
+
 const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:5173", credentials: true }));
 app.use(express.json());
+
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 
 // ==================
@@ -20,8 +24,8 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const baseUploads = path.join(__dirname, "uploads");
 const docsPath = path.join(baseUploads, "docs");
 const videosPath = path.join(baseUploads, "videos");
-
-[baseUploads, docsPath, videosPath].forEach((dir) => {
+const avatarsPath = path.join(baseUploads, "avatars");
+[baseUploads, docsPath, videosPath, avatarsPath].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
@@ -35,6 +39,7 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (req.body.type === "doc") cb(null, docsPath);
     else if (req.body.type === "video") cb(null, videosPath);
+    else if (req.body.type === "avatar") cb(null, avatarsPath);
     else cb(null, baseUploads);
   },
   filename: (req, file, cb) => {
@@ -44,7 +49,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // ==================
-// Middleware de auth
+// Middleware de auth (para rutas protegidas)
 // ==================
 function authMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -89,94 +94,157 @@ app.get("/health/db", async (_req, res) => {
 // ==================
 // Auth
 // ==================
-app.post("/auth/register", async (req, res) => {
+// ⬇️ Montamos el router de autenticación (contiene /auth/register y /auth/login)
+app.use("/auth", authRouter);
+
+// ===== Users (controlado por rol) =====
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ ok: false, error: "Permiso denegado" });
+    }
+    next();
+  };
+}
+
+// Perfil del usuario autenticado (con avatar por defecto en caso de null)
+app.get("/users/me", authMiddleware, async (req, res) => {
   try {
-    const { fullName, email, username, password } = req.body;
-    if (!fullName || !email || !username || !password) {
-      return res.status(400).json({ ok: false, error: "Faltan campos" });
-    }
-    if (password.length < 4 || password.length > 8) {
-      return res.status(400).json({ ok: false, error: "Contraseña 4–8 caracteres" });
-    }
-
-    const parts = fullName.trim().split(/\s+/);
-    const first_name = parts[0];
-    const last_name = parts.slice(1).join(" ");
-
-    const dup = await pool.query(
-      `SELECT 1 FROM user_account WHERE email = $1 OR username = $2 LIMIT 1`,
-      [email, username]
-    );
-    if (dup.rowCount > 0) {
-      return res.status(409).json({ ok: false, error: "Email o usuario ya existen" });
-    }
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const ins = await pool.query(
-      `INSERT INTO user_account (email, username, password_hash, first_name, last_name)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id`,
-      [email, username, password_hash, first_name, last_name]
-    );
-
-    return res.json({ ok: true, id: ins.rows[0].id });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ ok: false, error: "Error del servidor" });
-  }
-});
-
-app.post("/auth/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ ok: false, error: "Faltan campos" });
-
     const q = await pool.query(
-      `SELECT id, email, username, first_name, last_name, role, password_hash
-       FROM user_account WHERE email = $1 LIMIT 1`,
-      [email]
+      `SELECT id, email, username, first_name, last_name, role,
+              COALESCE(avatar_uri, '/uploads/avatars/default.png') AS avatar_uri,
+              (first_name || ' ' || COALESCE(last_name,'')) AS nombre_completo
+         FROM user_account
+        WHERE id = $1
+        LIMIT 1`,
+      [req.user.sub]
     );
-    if (q.rowCount === 0)
-      return res.status(401).json({ ok: false, error: "Credenciales inválidas" });
+    if (q.rowCount === 0) return res.status(404).json({ ok: false, error: "No encontrado" });
+    res.json({ ok: true, user: q.rows[0] });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, error: "Error del servidor" });
+  }
+});
 
-    const u = q.rows[0];
-    const ok = await bcrypt.compare(password, u.password_hash || "");
-    if (!ok)
-      return res.status(401).json({ ok: false, error: "Credenciales inválidas" });
+// Actualizar mi avatar (se envía avatar_uri que vino del /upload)
+app.put("/users/me/avatar", authMiddleware, async (req, res) => {
+  try {
+    const { avatar_uri } = req.body || {};
+    if (!avatar_uri || !avatar_uri.startsWith("/uploads/avatars/")) {
+      return res.status(400).json({ ok:false, error:"avatar_uri inválido" });
+    }
+    await pool.query(
+      `UPDATE user_account SET avatar_uri=$1, updated_at=NOW() WHERE id=$2`,
+      [avatar_uri, req.user.sub]
+    );
+    res.json({ ok:true });
+  } catch (e) {
+    console.error("update my avatar:", e);
+    res.status(500).json({ ok:false, error:"Error del servidor" });
+  }
+});
 
-    const name =
-      `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.username || u.email;
-    const token = jwt.sign({ sub: u.id, role: u.role }, JWT_SECRET, {
-      expiresIn: "12h",
-    });
+// Listado paginado (solo admin/superadmin)
+app.get("/admin/users", authMiddleware, requireRole("admin","superadmin"), async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page || "1", 10), 1);
+    const pageSize = Math.min(Math.max(parseInt(req.query.pageSize || "10", 10), 1), 100);
+    const offset = (page - 1) * pageSize;
 
-    return res.json({
-      token,
-      user: { id: u.id, name, email: u.email, role: u.role },
-    });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ ok: false, error: "Error del servidor" });
+    const listQ = await pool.query(
+      `SELECT id, email, username, first_name, last_name, role, created_at
+         FROM user_account
+        ORDER BY created_at DESC
+        LIMIT $1 OFFSET $2`,
+      [pageSize, offset]
+    );
+    const totalQ = await pool.query(`SELECT COUNT(*)::int AS total FROM user_account`);
+
+    res.json({ ok: true, users: listQ.rows, page, pageSize, total: totalQ.rows[0].total });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok:false, error:"Error del servidor" });
+  }
+});
+
+// Actualizar usuario (superadmin) o SOLO contraseña propia (cualquier rol)
+app.put("/admin/users/:id", authMiddleware, async (req, res) => {
+  const id = req.params.id;
+  const { email, username, first_name, last_name, role, password } = req.body || {};
+
+  // ¿es superadmin?
+  const isSuper = req.user?.role === "superadmin";
+  const isSelf  = String(req.user?.sub) === String(id);
+
+  // Si NO es superadmin: solo puede cambiar su propia contraseña
+  if (!isSuper) {
+    if (!isSelf) return res.status(403).json({ ok:false, error:"Permiso denegado" });
+    if (!password) return res.status(400).json({ ok:false, error:"Solo se permite 'password'" });
+    if (password.length < 4 || password.length > 64)
+      return res.status(400).json({ ok:false, error:"Contraseña inválida" });
+
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query(`UPDATE user_account SET password_hash=$1, updated_at=NOW() WHERE id=$2`, [hash, id]);
+    return res.json({ ok:true });
+  }
+
+  // --- superadmin: puede actualizar cualquier campo ---
+  try {
+    const sets = [], vals = []; let i = 1;
+    if (email)      { sets.push(`email=$${i++}`);      vals.push(email.trim().toLowerCase()); }
+    if (username)   { sets.push(`username=$${i++}`);   vals.push(username.trim()); }
+    if (first_name) { sets.push(`first_name=$${i++}`); vals.push(first_name.trim()); }
+    if (last_name)  { sets.push(`last_name=$${i++}`);  vals.push(last_name.trim()); }
+    if (role)       { sets.push(`role=$${i++}`);       vals.push(role); }
+    if (password)   {
+      if (password.length < 4 || password.length > 64)
+        return res.status(400).json({ ok:false, error:"Contraseña inválida" });
+      sets.push(`password_hash=$${i++}`); vals.push(await bcrypt.hash(password,10));
+    }
+    if (!sets.length) return res.json({ ok:true });
+
+    vals.push(id);
+    const q = await pool.query(
+      `UPDATE user_account SET ${sets.join(", ")}, updated_at=NOW() WHERE id=$${i} RETURNING id`, vals
+    );
+    if (q.rowCount === 0) return res.status(404).json({ ok:false, error:"No encontrado" });
+    res.json({ ok:true });
+  } catch (e) {
+    console.error("update user:", e);
+    res.status(500).json({ ok:false, error:"Error del servidor" });
+  }
+});
+
+// Eliminar usuario (solo superadmin)
+app.delete("/admin/users/:id", authMiddleware, requireRole("superadmin"), async (req, res) => {
+  try {
+    const r = await pool.query(`DELETE FROM user_account WHERE id = $1`, [req.params.id]);
+    if (r.rowCount === 0) return res.status(404).json({ ok:false, error:"No encontrado" });
+    res.json({ ok:true });
+  } catch (e) {
+    console.error("delete user:", e);
+    res.status(500).json({ ok:false, error:"Error del servidor" });
   }
 });
 
 // ==================
-// Uploads
+// Uploads (docs, videos, avatar)
 // ==================
-app.post("/upload", upload.single("file"), (req, res) => {
+app.post("/upload", authMiddleware, upload.single("file"), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "No se envió archivo" });
     }
 
-    const type = req.body.type; // "doc" | "video"
+    const type = req.body.type; // "doc" | "video" | "avatar"
     const webPath =
       type === "doc"
         ? `/uploads/docs/${req.file.filename}`
         : type === "video"
         ? `/uploads/videos/${req.file.filename}`
+        : type === "avatar"
+        ? `/uploads/avatars/${req.file.filename}`
         : `/uploads/${req.file.filename}`;
 
     res.json({

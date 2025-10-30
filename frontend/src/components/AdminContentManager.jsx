@@ -1,43 +1,102 @@
-import React, { useState, useEffect } from "react";
+// src/components/AdminContentManager.jsx
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import "./AdminContentManager.css";
 import logo from "../assets/logo.png";
-import fotoPerfil from "../assets/foto.png";
+import { uploadAvatar, setMyAvatar } from "../services/api";
 import { useNavigate, useLocation } from "react-router-dom";
+
+const API = "http://localhost:8000";
 
 function AdminContentManager() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ===== Estado del cajetín de búsqueda =====
+  // --- Auth guard ---
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) navigate("/login");
+  }, [navigate]);
+
+  // --- Usuario actual ---
+  const currentUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // --- Avatar ---
+  const fileRef = useRef(null);
+  const [avatarUrl, setAvatarUrl] = useState(
+    currentUser?.avatar_uri || "/uploads/avatars/default.png"
+  );
+  const displayAvatar = avatarUrl?.startsWith("http")
+    ? avatarUrl
+    : `${API}${avatarUrl}`;
+
+  const handleChooseAvatar = async (e) => {
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        alert("Selecciona una imagen válida.");
+        return;
+      }
+      if (file.size > 3 * 1024 * 1024) {
+        alert("La imagen no debe superar 3MB.");
+        return;
+      }
+
+      const up = await uploadAvatar(file); // { ok, file:{ path } }
+      const newPath = up?.file?.path;
+      if (!newPath) throw new Error("Respuesta inválida al subir avatar.");
+
+      await setMyAvatar(newPath);
+
+      setAvatarUrl(newPath);
+      const saved = JSON.parse(localStorage.getItem("user") || "null") || {};
+      saved.avatar_uri = newPath;
+      localStorage.setItem("user", JSON.stringify(saved));
+
+      alert("Avatar actualizado ✅");
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || "No se pudo actualizar el avatar");
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  // --- Búsqueda ---
   const [searchText, setSearchText] = useState("");
 
-  // ===== Estado del curso seleccionado (opcional si vuelves desde state) =====
-  const [selectedCourse, setSelectedCourse] = useState(null); // { id, title, ... }
-
+  // --- Curso seleccionado (si regresas con state) ---
+  const [selectedCourse, setSelectedCourse] = useState(null);
   useEffect(() => {
     if (location.state?.selectedCourse) {
       setSelectedCourse(location.state.selectedCourse);
     }
   }, [location.state]);
 
-  // ===== Handlers demo (luego integrarás acciones reales) =====
+  // --- Acciones demo ---
   const handlePlayVideo = () => alert("Reproducir Video (demo)");
   const handleViewContent = () => alert("Ver Contenido del Curso (demo)");
   const handleDoExam = () => alert("Presentar Evaluación (demo)");
-
   const handleDownloadVideo = () => alert("Descargar Video (demo)");
   const handleDownloadContent = () => alert("Descargar Contenido (demo)");
   const handleDownloadCert = () => alert("Descargar Certificado (demo)");
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/login");
   };
 
-  // ===== Buscar cursos -> navegar a la página de resultados =====
   const onSearch = () => {
     const q = (searchText || "").trim();
-    if (!q) return; // no navegamos con vacío
+    if (!q) return;
     navigate(`/admin/search?q=${encodeURIComponent(q)}`);
   };
 
@@ -48,9 +107,25 @@ function AdminContentManager() {
           <img src={logo} alt="GuideSphere Logo" className="logo" />
           <h1 className="titulo-centrado">GuideSphere</h1>
         </div>
+
         <div className="user-info">
-          <img src={fotoPerfil} alt="Foto de perfil" className="avatar" />
-          <span>Profesor</span>
+          <img
+            src={displayAvatar}
+            alt="Avatar"
+            className="avatar"
+            onClick={() => fileRef.current?.click()}
+            title="Cambiar foto de perfil"
+          />
+
+          <span>{currentUser?.email || "Usuario"}</span>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleChooseAvatar}
+          />
         </div>
       </header>
 
@@ -62,18 +137,9 @@ function AdminContentManager() {
         <aside className="sidebar">
           <h3>Menú</h3>
 
-          <details>
-            <summary>Cargar un Curso</summary>
-            <button onClick={() => navigate("/courses/new")}>Contenido del Curso</button>
-            <button onClick={() => alert("Título (demo)")}>Título</button>
-            <button onClick={() => alert("Descripción (demo)")}>Descripción</button>
-            <button onClick={() => alert("Porcentaje aprobatorio (demo)")}>
-              Porcentaje aprobatorio
-            </button>
-            <button onClick={() => alert("Guardar (demo)")}>Guardar</button>
-            <button onClick={() => alert("Editar (demo)")}>Editar</button>
-            <button onClick={() => alert("Eliminar (demo)")}>Eliminar</button>
-          </details>
+          <button className="menu-link" onClick={() => navigate("/courses/new")}>
+            Cargar un Curso
+          </button>
 
           <details>
             <summary>Cargar un Video</summary>
@@ -89,7 +155,7 @@ function AdminContentManager() {
             <summary>Cargar un Documento</summary>
             <button onClick={() => alert("PDF (demo)")}>PDF</button>
             <button onClick={() => alert("PPTX (demo)")}>PPTX</button>
-            <button onClick={() => alert("Excel (demo)")} >Excel</button>
+            <button onClick={() => alert("Excel (demo)")}>Excel</button>
             <button onClick={() => alert("Word (demo)")}>Word</button>
             <button onClick={() => alert("Guardar documento (demo)")}>Guardar</button>
             <button onClick={() => alert("Editar documento (demo)")}>Editar</button>
@@ -107,22 +173,6 @@ function AdminContentManager() {
             <button onClick={() => alert("Eliminar certificado (demo)")}>Eliminar</button>
           </details>
 
-          <details>
-            <summary>Revisar Estadísticas</summary>
-            <button onClick={() => alert("Listado de cursos (demo)")}>Listado de cursos</button>
-            <button onClick={() => alert("Participantes de por vida (demo)")}>
-              Participantes de por vida
-            </button>
-            <button onClick={() => alert("Participantes Aprobados (demo)")}>
-              Participantes Aprobados
-            </button>
-            <button onClick={() => alert("Participantes en curso (demo)")}>
-              Participantes en curso
-            </button>
-            <button onClick={() => alert("Valoraciones (demo)")}>Valoraciones</button>
-            <button onClick={() => alert("Comentarios (demo)")}>Comentarios</button>
-          </details>
-
           <div className="sidebar-divider" />
           <button
             className="btn-gestionar-usuarios"
@@ -137,7 +187,6 @@ function AdminContentManager() {
           <div className="title-row">
             <h2>Mirar Curso: {selectedCourse ? selectedCourse.title : "Título"}</h2>
 
-            {/* Cajetín de búsqueda + botón */}
             <div className="search-box">
               <input
                 type="text"
@@ -146,7 +195,9 @@ function AdminContentManager() {
                 onChange={(e) => setSearchText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && onSearch()}
               />
-              <button className="btn-buscar" onClick={onSearch}>Buscar</button>
+              <button className="btn-buscar" onClick={onSearch}>
+                Buscar
+              </button>
             </div>
           </div>
 

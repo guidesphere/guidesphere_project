@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: guidesphere
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - gs_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U postgres -d guidesphere"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: node:20-alpine
+    working_dir: /app
+    env_file: ./backend/.env
+    volumes:
+      - ./backend:/app
+      - ./backend/uploads:/app/uploads
+    command: sh -c "npm install && npx nodemon index.js"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend_eval:
+    build: ./backend_eval
+    env_file: ./backend_eval/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8010:8000"
+      - "8001:8000"
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    environment:
+      VITE_API_URL: "http://localhost:8000"
+      VITE_EVAL_URL: "http://localhost:8010"
+    volumes:
+      - ./frontend:/app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+      - backend_eval
+
+volumes:
+  gs_pg:
+    external: true
+    name: guidesphere_gs_pg

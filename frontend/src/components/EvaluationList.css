@@ -1,0 +1,95 @@
+/* --- Contenedor --- */
+.evl__wrap{
+  max-width: 1200px;             /* +ancho */
+  margin: 2rem auto;
+  padding: 2.25rem 3rem;         /* +espacio interno */
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 4px 10px rgba(0,0,0,.1);
+}
+
+/* --- Header --- */
+.evl__header{ text-align:center; margin-bottom:1.5rem; }
+.evl__header h2{
+  color:#6518af;
+  font-size:2rem;
+  margin:0 0 .75rem 0;           /* centra título (ya por text-align) */
+}
+.evl__badge{
+  margin:0 auto;                 /* centra la pastilla */
+  display:inline-block;
+  font-weight:600;
+  color:#fff;
+  background:#2ECC71;
+  padding:8px 18px;
+  border-radius:10px;
+  font-size:1rem;
+}
+.evl__badge--in_progress{ background:#FFA500; }
+.evl__badge--failed{ background:#e74c3c; }
+.evl__badge--approved{ background:#2ECC71; }
+
+/* --- Tabla --- */
+.evl__table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0 10px;         /* separa filas visualmente */
+  table-layout:fixed;            /* ayuda a espaciar columnas */
+}
+.evl__table th,
+.evl__table td{
+  padding:12px 18px;             /* +espacio entre columnas */
+  font-size:.96rem;
+  text-align:left;
+  background:#fff;
+}
+.evl__table th{
+  background:#f6f6f6;
+  color:#333;
+  border-bottom:2px solid #e0e0e0;
+}
+
+/* anchos sugeridos por columna para “despegar” el contenido */
+.evl__table th:nth-child(1), .evl__table td:nth-child(1){ min-width:260px; }
+.evl__table th:nth-child(2), .evl__table td:nth-child(2){ width:120px; }
+.evl__table th:nth-child(3), .evl__table td:nth-child(3){ width:140px; text-align:center; }
+.evl__table th:nth-child(4), .evl__table td:nth-child(4){ width:160px; text-align:center; }
+.evl__table th:nth-child(5), .evl__table td:nth-child(5){ width:140px; text-align:center; }
+.evl__table th:nth-child(6), .evl__table td:nth-child(6){ width:150px; text-align:right; }
+
+/* Botón */
+.evl__btn{
+  background:#FFA500;
+  color:#fff;
+  border:none;
+  padding:8px 16px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+  transition:background-color .2s ease-in-out, transform .05s ease-in-out;
+}
+.evl__btn:hover:not(:disabled){ background:#e69500; }
+.evl__btn:active:not(:disabled){ transform:translateY(1px); }
+.evl__btn:disabled{ background:#cfcfcf; cursor:not-allowed; }
+
+/* --- Footer --- */
+.evl__footer{
+  margin-top:1.5rem;
+  font-weight:600;
+  display:flex;
+  justify-content:center;
+  gap:2rem;
+  flex-wrap:wrap;
+}
+.evl__footer div{ font-size:.95rem; }
+.evl__footer div:nth-child(1){ color:#2ECC71; }   /* Completados */
+.evl__footer div:nth-child(2){ color:#6518af; }   /* Aprobados/Reprobados/En proceso */
+.evl__footer div:nth-child(2)::before{ content:"• "; color:#000; }
+
+/* --- Responsive --- */
+@media (max-width: 980px){
+  .evl__wrap{ padding:1.25rem 1.25rem; }
+  .evl__header h2{ font-size:1.6rem; }
+  .evl__table th, .evl__table td{ padding:10px 12px; }
+  .evl__table th:nth-child(1), .evl__table td:nth-child(1){ min-width:200px; }
+}
