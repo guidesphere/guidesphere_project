@@ -1,0 +1,291 @@
+/* --- Estructura general --- */
+.course-panel {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 2rem 3rem;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Título principal --- */
+.course-panel h2 {
+  color: #6518af;
+  font-size: 1.8rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* --- Barra de progreso general --- */
+.general-progress {
+  background: #eee;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 20px;
+  margin-bottom: 2rem;
+}
+
+.general-progress .progress-bar {
+  background: #2ecc71;
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+/* --- Listado de contenidos --- */
+.content-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* --- Tarjeta de cada video o documento --- */
+.content-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9f9f9;
+  border-left: 6px solid #ffa500;
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+}
+
+.content-item:hover {
+  transform: scale(1.02);
+}
+
+/* --- Descripción y progreso individual --- */
+.item-info {
+  flex: 1;
+  margin-right: 1.5rem;
+}
+
+.item-info h4 {
+  margin: 0 0 0.3rem;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.item-info p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* --- Barra de progreso individual --- */
+.item-progress {
+  background: #e4e4e4;
+  border-radius: 8px;
+  height: 10px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.item-progress .bar {
+  background: #6518af;
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+/* --- Botón Ver --- */
+.view-btn {
+  background: #6518af;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+
+.view-btn:hover {
+  background: #ffa500;
+}
+
+/* ===================================================
+   🎓 Mis Cursos (MyCourses.jsx)
+   =================================================== */
+
+/* Header superior */
+.cp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.cp-title {
+  color: #6518af;
+  margin: 0;
+}
+
+.cp-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Buscador */
+.cp-search input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+.cp-search-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #6518af;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  margin-left: 6px;
+  transition: background 0.3s ease;
+}
+
+.cp-search-btn:hover {
+  background: #ffa500;
+}
+
+/* Botón Salir */
+.cp-logout-btn {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: none;
+  background: #ff7a00;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+
+.cp-logout-btn:hover {
+  background: #6518af;
+}
+
+/* Cuadrícula de cursos (2 columnas responsivas) */
+.cp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 16px;
+  margin-top: 1.5rem;
+}
+
+/* Paginación */
+.cp-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.cp-pagination button {
+  background: #6518af;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+
+.cp-pagination button:hover {
+  background: #ffa500;
+}
+
+.cp-pagination span {
+  color: #333;
+  font-size: 0.95rem;
+}
+
+/* === Layout en 2 columnas para "Mis Cursos" === */
+
+.my-courses .cp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 columnas */
+  gap: 28px 40px; /* más separación: filas 28px, columnas 40px */
+  max-width: 1100px;
+  margin: 1.5rem auto 0; /* centrado como antes */
+}
+
+.my-courses .cp-grid > * {
+  width: 100%;
+  margin: 0;
+}
+
+/* En pantallas pequeñas, vuelve a 1 columna */
+@media (max-width: 900px) {
+  .my-courses .cp-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* === Margen superior del encabezado de Mis Cursos === */
+.my-courses {
+  padding-top: 20px; /* separa del borde superior */
+}
+
+/* Opcional: si quieres un poquito más de aire visual */
+@media (min-width: 768px) {
+  .my-courses {
+    padding-top: 32px;
+  }
+}
+
+/* === Layout en 2 columnas para Gestión de Cursos === */
+.courses-panel .cp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 columnas */
+  gap: 28px 40px; /* filas x columnas */
+  max-width: 1100px;
+  margin: 1.5rem auto 0;
+}
+
+.courses-panel .cp-grid > * {
+  width: 100%;
+  margin: 0;
+}
+
+/* En pantallas pequeñas, vuelve a 1 columna */
+@media (max-width: 900px) {
+  .courses-panel .cp-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* Margen superior similar a Mis Cursos */
+.courses-panel {
+  padding-top: 32px;
+}
+
+/* === Ajuste de tamaño y espaciado de botones en tarjetas === */
+.course-card button {
+  padding: 5px 10px;
+  font-size: 0.65rem;
+  border-radius: 6px;
+  margin: 2px 3px;
+}
+
+/* Asegura que las acciones dentro de la tarjeta se distribuyan en una sola fila */
+.course-card .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+/* Ajuste visual del botón Eliminar (ligeramente más compacto) */
+.course-card button.danger,
+.course-card button[style*="red"] {
+  padding: 5px 10px !important;
+}

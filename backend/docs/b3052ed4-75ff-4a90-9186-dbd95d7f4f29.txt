@@ -1,0 +1,1 @@
+Este video explica contenedores, construcci¢n con Dockerfile, mapeo de puertos, persistencia con vol£menes y orquestaci¢n b sica. Incluye ejemplos claros. 

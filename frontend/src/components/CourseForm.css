@@ -8,11 +8,13 @@
 
 .course-card {
   background: #fff;
-  padding: 2rem;
+  padding: 2rem 2.5rem;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 900px;
+  position: relative; /* para el botón cerrar */
+  box-sizing: border-box;
 }
 
 .course-header {
@@ -33,7 +35,14 @@
 .course-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  gap: 1.75rem 2rem;
+}
+
+/* Responsive: en pantallas más estrechas, una sola columna */
+@media (max-width: 920px) {
+  .course-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 .course-form label {
@@ -51,6 +60,7 @@
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .course-form textarea {
@@ -58,43 +68,60 @@
   min-height: 100px;
 }
 
-.btn {
-  display: block;
-  margin: 2rem auto 0 auto;
+/* Contenedor del botón Guardar, centrado */
+.register-actions {
+  grid-column: 1 / -1;          /* ocupa las dos columnas */
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* Botón Guardar dentro de la tarjeta (override de cualquier .btn global) */
+.course-card .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: #ffa500;
   border: none;
   color: white;
   font-size: 1rem;
-  padding: 0.8rem 1.5rem;
+  padding: 0.7rem 1.6rem;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.3s;
+  width: auto;                  /* 👈 rompe width: 100% global */
+  min-width: 160px;
 }
 
-.btn:hover {
+.course-card .btn:hover {
   background-color: #e69500;
 }
 
+/* Botones pequeños (Agregar / Seleccionar archivo) */
 .btn-small {
   width: auto;
   background-color: #2ecc71;
   border: none;
   color: white;
-  padding: 0.4rem 0.8rem;
+  padding: 0.8rem 0.8rem;
   border-radius: 6px;
   cursor: pointer;
   margin-bottom: 0.5rem;
+  font-size: 0.7rem;
+  white-space: nowrap;
 }
 
 .btn-small:hover {
   background-color: #27ae60;
 }
+
 .file-row {
   margin-bottom: 1rem;
 }
 
 .btn-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.3rem;
 }
@@ -116,33 +143,21 @@
   color: #fff !important;
 }
 
-/* La tarjeta será el referente para colocar el botón */
-.course-card {
-  position: relative;           /* 👈 necesario para posicionar el botón dentro */
-}
-
-/* El header centrado, pero permitimos un botón absoluto dentro */
-.course-header {
-  position: relative;           /* 👈 para ubicar el botón dentro del header */
-  text-align: center;
-  margin-bottom: 2rem;
-  padding-top: 0.25rem;
-}
-
 /* Botón cerrar arriba-derecha, dentro de la tarjeta */
 .btn-close {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 34px;
-  height: 34px;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #f0f0f5;
   color: #333;
-  font-size: 18px;
-  line-height: 34px;
-  text-align: center;
+  font-size: 22px;
+  display: flex;              /* todo el cuadrado es clicable */
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: background-color .2s, transform .05s;
   box-shadow: 0 1px 3px rgba(0,0,0,.08);
@@ -153,10 +168,71 @@
 }
 
 .btn-close:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 .btn-close:focus {
   outline: 2px solid #6518af33;
   outline-offset: 2px;
+}
+
+/* ================================
+   Popup de carga al guardar curso
+   ================================ */
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 18px 24px 20px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  min-width: 260px;
+  max-width: 360px;
+  text-align: center;
+}
+
+.loading-modal h3 {
+  margin: 0 0 8px;
+  color: #6518af;
+}
+
+.loading-modal p {
+  margin: 0 0 14px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Barra de carga animada */
+.loading-bar {
+  width: 100%;
+  height: 8px;
+  background: #eeeeee;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.loading-bar-inner {
+  width: 40%;
+  height: 100%;
+  background: #ffa500;
+  border-radius: 999px;
+  animation: loading-bar-anim 0.9s linear infinite;
+}
+
+@keyframes loading-bar-anim {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
 }

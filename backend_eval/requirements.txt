@@ -4,3 +4,8 @@ psycopg2-binary
 pydantic
 python-multipart
 PyPDF2
+asyncpg
+python-docx
+openai-whisper
+
+

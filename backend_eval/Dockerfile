@@ -1,22 +1,32 @@
-# Imagen base ligera de Python
+# backend_eval/Dockerfile
 FROM python:3.11-slim
 
-# Configuración de entorno
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Evitar preguntas en apt y cache de pip
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1
 
-# Crear directorio de trabajo
+# Sistema: ffmpeg (STT necesita extraer audio)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copiar e instalar dependencias
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Dependencias base del proyecto
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt || true
 
-# Copiar el resto del proyecto
-COPY . .
+# Whisper rápido en CPU (versiones compatibles)
+RUN pip install --no-cache-dir \
+    faster-whisper==1.0.3 \
+    "ctranslate2>=4,<5" \
+    numpy
 
-# Puerto interno de FastAPI
+# Copiar código
+COPY . /app
+
+# Puerto interno
 EXPOSE 8000
 
-# Comando de inicio del servidor
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Arranque del servicio
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]

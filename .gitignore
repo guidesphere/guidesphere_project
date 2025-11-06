@@ -1,6 +1,18 @@
+# Entornos
 backend/.env
+backend_eval/.env
 frontend/.env
+
+# Archivos subidos por usuarios
 backend/uploads/
+backend/videos/
+
+# Backups locales
+backup_docker/
+
+# Dependencias / builds
 node_modules/
 dist/
+
+# Mac / sistema
 .DS_Store

@@ -1,0 +1,1 @@
+Docker es una plataforma de contenedores. Aprendemos im genes, redes, vol£menes, Compose y buenas pr cticas para desplegar apps en producci¢n. 

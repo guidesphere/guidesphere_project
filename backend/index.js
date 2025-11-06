@@ -1,26 +1,44 @@
 // backend/index.js
-require('dotenv').config();
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { pool } = require("./db");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const multer = require("multer");
+const jwt = require("jsonwebtoken");
 
-// Router de autenticación
+const { pool } = require("./db");
 const authRouter = require("./routes/auth");
+const coursesRouter = require("./routes/courses");
+const authRequired = require("./middleware/auth");
 
 const app = express();
-app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:5173", credentials: true }));
+
+/* ========== CORS + JSON (antes de rutas) ========== */
+const allowed = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+];
+const extra = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const origins = Array.from(new Set([...allowed, ...extra]));
+
+app.use(cors({ origin: origins, credentials: true }));
 app.use(express.json());
+
+/* ========== Logger básico p/diagnóstico ========== */
+app.use((req, _res, next) => {
+  console.log("[REQ]", req.method, req.url);
+  next();
+});
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 
-// ==================
-// Asegura carpetas
-// ==================
+/* ========== Asegura carpetas de subida ========== */
 const baseUploads = path.join(__dirname, "uploads");
 const docsPath = path.join(baseUploads, "docs");
 const videosPath = path.join(baseUploads, "videos");
@@ -28,86 +46,90 @@ const avatarsPath = path.join(baseUploads, "avatars");
 [baseUploads, docsPath, videosPath, avatarsPath].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
-
-// Servir estático los archivos subidos
 app.use("/uploads", express.static(baseUploads));
 
-// ==================
-// Configuración de multer
-// ==================
+/* ========== Multer ========== */
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (req.body.type === "doc") cb(null, docsPath);
-    else if (req.body.type === "video") cb(null, videosPath);
-    else if (req.body.type === "avatar") cb(null, avatarsPath);
+  destination: (req, _file, cb) => {
+    const t = (req.body.type || "").toLowerCase();
+    if (t === "doc") cb(null, docsPath);
+    else if (t === "video") cb(null, videosPath);
+    else if (t === "avatar") cb(null, avatarsPath);
     else cb(null, baseUploads);
   },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
+  filename: (_req, file, cb) =>
+    cb(null, Date.now() + path.extname(file.originalname)),
 });
 const upload = multer({ storage });
 
-// ==================
-// Middleware de auth (para rutas protegidas)
-// ==================
+/* ========== Auth middleware local (JWT) ========== */
 function authMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
-  if (!authHeader) return res.status(401).json({ ok: false, error: "Falta token" });
-
+  if (!authHeader)
+    return res.status(401).json({ ok: false, error: "Falta token" });
   const token = authHeader.split(" ")[1];
-  if (!token) return res.status(401).json({ ok: false, error: "Token inválido" });
-
+  if (!token)
+    return res.status(401).json({ ok: false, error: "Token inválido" });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // { sub, role }
+    req.user = decoded;
     next();
   } catch {
-    return res.status(401).json({ ok: false, error: "Token no válido o expirado" });
+    return res
+      .status(401)
+      .json({ ok: false, error: "Token no válido o expirado" });
   }
 }
 
-// ==================
-// Rutas básicas
-// ==================
-app.get("/ping", (req, res) => res.json({ ok: true }));
-
-app.get("/db-check", async (req, res) => {
+/* ========== Healthchecks ========== */
+app.get("/ping", (_req, res) => res.json({ ok: true }));
+app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
+app.get("/health/db", async (_req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ db: "ok" });
+  } catch (e) {
+    res.status(500).json({ db: "down", error: e.message });
+  }
+});
+app.get("/db-check", async (_req, res) => {
   try {
     const r = await pool.query(
       "SELECT count(*)::int AS tables FROM information_schema.tables WHERE table_schema='public';"
     );
     res.json({ ok: true, tables: r.rows[0].tables });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-// Healthchecks
-app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
-app.get("/health/db", async (_req, res) => {
-  try { await pool.query("SELECT 1"); return res.json({ db: "ok" }); }
-  catch (e) { return res.status(500).json({ db: "down", error: e.message }); }
+/* ========== Rutas principales ========== */
+app.use("/auth", authRouter); // login/registro
+
+// Buscador público de cursos
+app.get("/courses/search", async (req, res) => {
+  try {
+    const q = (req.query.q || "").trim();
+    if (!q) return res.json({ ok: true, results: [] });
+    const r = await pool.query(
+      `SELECT id, title, description, created_at
+         FROM course
+        WHERE title ILIKE $1 OR description ILIKE $1
+        ORDER BY created_at DESC
+        LIMIT 50`,
+      [`%${q}%`]
+    );
+    res.json({ ok: true, results: r.rows });
+  } catch (e) {
+    console.error("courses SEARCH:", e);
+    res.status(500).json({ ok: false, error: "Error en búsqueda" });
+  }
 });
 
-// ==================
-// Auth
-// ==================
-// ⬇️ Montamos el router de autenticación (contiene /auth/register y /auth/login)
-app.use("/auth", authRouter);
+// Cursos protegidos
+app.use("/courses", authRequired, coursesRouter);
 
-// ===== Users (controlado por rol) =====
-function requireRole(...roles) {
-  return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ ok: false, error: "Permiso denegado" });
-    }
-    next();
-  };
-}
-
-// Perfil del usuario autenticado (con avatar por defecto en caso de null)
+// Usuario actual
 app.get("/users/me", authMiddleware, async (req, res) => {
   try {
     const q = await pool.query(
@@ -119,323 +141,252 @@ app.get("/users/me", authMiddleware, async (req, res) => {
         LIMIT 1`,
       [req.user.sub]
     );
-    if (q.rowCount === 0) return res.status(404).json({ ok: false, error: "No encontrado" });
+    if (q.rowCount === 0)
+      return res.status(404).json({ ok: false, error: "No encontrado" });
     res.json({ ok: true, user: q.rows[0] });
   } catch (e) {
-    console.error(e);
     res.status(500).json({ ok: false, error: "Error del servidor" });
   }
 });
 
-// Actualizar mi avatar (se envía avatar_uri que vino del /upload)
+/* ========== (Opcional) Actualizar avatar por ruta dedicada ========== */
+/* La dejamos por si algún día quieres usarla, pero el flujo actual
+   usa sólo POST /upload con type="avatar". */
 app.put("/users/me/avatar", authMiddleware, async (req, res) => {
   try {
     const { avatar_uri } = req.body || {};
-    if (!avatar_uri || !avatar_uri.startsWith("/uploads/avatars/")) {
-      return res.status(400).json({ ok:false, error:"avatar_uri inválido" });
+
+    if (!avatar_uri || typeof avatar_uri !== "string") {
+      return res
+        .status(400)
+        .json({ ok: false, error: "avatar_uri es obligatorio" });
     }
-    await pool.query(
-      `UPDATE user_account SET avatar_uri=$1, updated_at=NOW() WHERE id=$2`,
-      [avatar_uri, req.user.sub]
+
+    const cleanPath = String(avatar_uri).trim();
+
+    const r = await pool.query(
+      `UPDATE user_account
+         SET avatar_uri = $1,
+             updated_at = NOW()
+       WHERE id = $2`,
+      [cleanPath, req.user.sub]
     );
-    res.json({ ok:true });
+
+    if (r.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ ok: false, error: "Usuario no encontrado" });
+    }
+
+    return res.json({ ok: true, avatar_uri: cleanPath });
   } catch (e) {
-    console.error("update my avatar:", e);
-    res.status(500).json({ ok:false, error:"Error del servidor" });
+    console.error("PUT /users/me/avatar", e);
+    res
+      .status(500)
+      .json({ ok: false, error: "Error actualizando foto de perfil" });
   }
 });
 
-// Listado paginado (solo admin/superadmin)
-app.get("/admin/users", authMiddleware, requireRole("admin","superadmin"), async (req, res) => {
+/* ========== Administración de usuarios ========== */
+app.get("/admin/users", authMiddleware, async (req, res) => {
   try {
-    const page = Math.max(parseInt(req.query.page || "1", 10), 1);
-    const pageSize = Math.min(Math.max(parseInt(req.query.pageSize || "10", 10), 1), 100);
-    const offset = (page - 1) * pageSize;
+    const { page = 1, pageSize = 10, q = "" } = req.query;
+    const limit = Math.max(1, Math.min(100, Number(pageSize)));
+    const offset = (Math.max(1, Number(page)) - 1) * limit;
 
-    const listQ = await pool.query(
-      `SELECT id, email, username, first_name, last_name, role, created_at
+    // No superadmin: devuelve solo su propio usuario
+    if ((req.user?.role || "").toLowerCase() !== "superadmin") {
+      const me = await pool.query(
+        `SELECT id, email, username, role,
+                COALESCE(avatar_uri,'/uploads/avatars/default.png') AS avatar_uri,
+                COALESCE(NULLIF(first_name,''),'') AS first_name,
+                COALESCE(NULLIF(last_name,''),'') AS last_name,
+                (COALESCE(first_name,'') || ' ' || COALESCE(last_name,'')) AS full_name,
+                created_at
+           FROM user_account
+          WHERE id = $1
+          LIMIT 1`,
+        [req.user.sub]
+      );
+      return res.json({
+        ok: true,
+        users: me.rows,
+        total: me.rowCount,
+        page: 1,
+        pageSize: limit,
+      });
+    }
+
+    // superadmin: listado con búsqueda/paginación
+    const like = `%${q.trim()}%`;
+    const where = q
+      ? `WHERE email ILIKE $1 OR username ILIKE $1 OR first_name ILIKE $1 OR last_name ILIKE $1`
+      : ``;
+    const params = q ? [like, limit, offset] : [limit, offset];
+
+    const list = await pool.query(
+      `SELECT id, email, username, role,
+              COALESCE(avatar_uri,'/uploads/avatars/default.png') AS avatar_uri,
+              COALESCE(NULLIF(first_name,''),'') AS first_name,
+              COALESCE(NULLIF(last_name,''),'') AS last_name,
+              (COALESCE(first_name,'') || ' ' || COALESCE(last_name,'')) AS full_name,
+              created_at
          FROM user_account
-        ORDER BY created_at DESC
-        LIMIT $1 OFFSET $2`,
-      [pageSize, offset]
+         ${q ? where : ""}
+         ORDER BY created_at DESC
+         LIMIT $${q ? 2 : 1} OFFSET $${q ? 3 : 2};`,
+      params
     );
-    const totalQ = await pool.query(`SELECT COUNT(*)::int AS total FROM user_account`);
-
-    res.json({ ok: true, users: listQ.rows, page, pageSize, total: totalQ.rows[0].total });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ ok:false, error:"Error del servidor" });
-  }
-});
-
-// Actualizar usuario (superadmin) o SOLO contraseña propia (cualquier rol)
-app.put("/admin/users/:id", authMiddleware, async (req, res) => {
-  const id = req.params.id;
-  const { email, username, first_name, last_name, role, password } = req.body || {};
-
-  // ¿es superadmin?
-  const isSuper = req.user?.role === "superadmin";
-  const isSelf  = String(req.user?.sub) === String(id);
-
-  // Si NO es superadmin: solo puede cambiar su propia contraseña
-  if (!isSuper) {
-    if (!isSelf) return res.status(403).json({ ok:false, error:"Permiso denegado" });
-    if (!password) return res.status(400).json({ ok:false, error:"Solo se permite 'password'" });
-    if (password.length < 4 || password.length > 64)
-      return res.status(400).json({ ok:false, error:"Contraseña inválida" });
-
-    const hash = await bcrypt.hash(password, 10);
-    await pool.query(`UPDATE user_account SET password_hash=$1, updated_at=NOW() WHERE id=$2`, [hash, id]);
-    return res.json({ ok:true });
-  }
-
-  // --- superadmin: puede actualizar cualquier campo ---
-  try {
-    const sets = [], vals = []; let i = 1;
-    if (email)      { sets.push(`email=$${i++}`);      vals.push(email.trim().toLowerCase()); }
-    if (username)   { sets.push(`username=$${i++}`);   vals.push(username.trim()); }
-    if (first_name) { sets.push(`first_name=$${i++}`); vals.push(first_name.trim()); }
-    if (last_name)  { sets.push(`last_name=$${i++}`);  vals.push(last_name.trim()); }
-    if (role)       { sets.push(`role=$${i++}`);       vals.push(role); }
-    if (password)   {
-      if (password.length < 4 || password.length > 64)
-        return res.status(400).json({ ok:false, error:"Contraseña inválida" });
-      sets.push(`password_hash=$${i++}`); vals.push(await bcrypt.hash(password,10));
-    }
-    if (!sets.length) return res.json({ ok:true });
-
-    vals.push(id);
-    const q = await pool.query(
-      `UPDATE user_account SET ${sets.join(", ")}, updated_at=NOW() WHERE id=$${i} RETURNING id`, vals
+    const cnt = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM user_account ${q ? where : ""};`,
+      q ? [like] : []
     );
-    if (q.rowCount === 0) return res.status(404).json({ ok:false, error:"No encontrado" });
-    res.json({ ok:true });
-  } catch (e) {
-    console.error("update user:", e);
-    res.status(500).json({ ok:false, error:"Error del servidor" });
-  }
-});
-
-// Eliminar usuario (solo superadmin)
-app.delete("/admin/users/:id", authMiddleware, requireRole("superadmin"), async (req, res) => {
-  try {
-    const r = await pool.query(`DELETE FROM user_account WHERE id = $1`, [req.params.id]);
-    if (r.rowCount === 0) return res.status(404).json({ ok:false, error:"No encontrado" });
-    res.json({ ok:true });
-  } catch (e) {
-    console.error("delete user:", e);
-    res.status(500).json({ ok:false, error:"Error del servidor" });
-  }
-});
-
-// ==================
-// Uploads (docs, videos, avatar)
-// ==================
-app.post("/upload", authMiddleware, upload.single("file"), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No se envió archivo" });
-    }
-
-    const type = req.body.type; // "doc" | "video" | "avatar"
-    const webPath =
-      type === "doc"
-        ? `/uploads/docs/${req.file.filename}`
-        : type === "video"
-        ? `/uploads/videos/${req.file.filename}`
-        : type === "avatar"
-        ? `/uploads/avatars/${req.file.filename}`
-        : `/uploads/${req.file.filename}`;
 
     res.json({
       ok: true,
-      file: {
-        name: req.file.filename,
-        type: type || "file",
-        path: webPath,
-      },
+      users: list.rows,
+      total: cnt.rows[0].total,
+      page: Number(page),
+      pageSize: limit,
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ ok: false, error: "Error al subir archivo" });
+  } catch (e) {
+    console.error("GET /admin/users", e);
+    res.status(500).json({ ok: false, error: "Error listando usuarios" });
   }
 });
 
-// ==================
-// Cursos (crea curso + guarda docs/videos en DB)
-// ==================
-app.post("/courses", authMiddleware, async (req, res) => {
-  const client = await pool.connect();
+app.put("/admin/users/:id", authMiddleware, async (req, res) => {
   try {
-    const { title, description, passing_score, documents = [], videos = [] } =
-      req.body;
+    const targetId = req.params.id;
+    const me = req.user;
+    const isSuper = (me.role || "").toLowerCase() === "superadmin";
+    const isSelf = me.sub === targetId;
 
-    if (!title || !description) {
-      return res.status(400).json({ ok: false, error: "Faltan campos obligatorios" });
+    if (!isSuper && !isSelf)
+      return res.status(403).json({ ok: false, error: "Sin permiso" });
+
+    const { email, username, first_name, last_name, role, new_password } =
+      req.body || {};
+    const updates = [];
+    const params = [];
+
+    if (email) {
+      params.push(String(email).trim());
+      updates.push(`email=$${params.length}`);
+    }
+    if (username) {
+      params.push(String(username).trim());
+      updates.push(`username=$${params.length}`);
+    }
+    if (first_name != null) {
+      params.push(String(first_name).trim());
+      updates.push(`first_name=$${params.length}`);
+    }
+    if (last_name != null) {
+      params.push(String(last_name).trim());
+      updates.push(`last_name=$${params.length}`);
     }
 
-    await client.query("BEGIN");
-
-    // 1) Curso
-    const courseRes = await client.query(
-      `INSERT INTO course (title, description, passing_score, created_by)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, title, description, passing_score, created_by, created_at`,
-      [title, description, passing_score || 70, req.user.sub]
-    );
-    const course = courseRes.rows[0];
-
-    // 2) Documentos -> content_item + document_asset
-    for (const uri of documents) {
-      const ci = await client.query(
-        `INSERT INTO content_item (course_id, type, title, created_by)
-         VALUES ($1, 'document', $2, $3)
-         RETURNING id`,
-        [course.id, "Documento", req.user.sub]
-      );
-      await client.query(
-        `INSERT INTO document_asset (content_id, source, uri)
-         VALUES ($1, 'upload', $2)`,
-        [ci.rows[0].id, uri]
-      );
+    // solo superadmin cambia rol
+    if (role && isSuper) {
+      params.push(String(role).trim());
+      updates.push(`role=$${params.length}`);
     }
 
-    // 3) Videos -> content_item + media_asset
-    for (const uri of videos) {
-      const ci = await client.query(
-        `INSERT INTO content_item (course_id, type, title, created_by)
-         VALUES ($1, 'video', $2, $3)
-         RETURNING id`,
-        [course.id, "Video", req.user.sub]
-      );
-      await client.query(
-        `INSERT INTO media_asset (content_id, source, uri)
-         VALUES ($1, 'upload', $2)`,
-        [ci.rows[0].id, uri]
-      );
+    // Contraseña en TEXTO PLANO (coherente con login/DB actual)
+    if (new_password && (isSuper || isSelf)) {
+      params.push(String(new_password).trim());
+      updates.push(`password_hash=$${params.length}`);
     }
 
-    await client.query("COMMIT");
-    return res.json({ ok: true, course });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    console.error("Error creando curso con assets:", err);
-    return res.status(500).json({ ok: false, error: "Error del servidor" });
-  } finally {
-    client.release();
+    if (updates.length === 0) return res.json({ ok: true, updated: 0 });
+
+    params.push(targetId);
+    const sql = `UPDATE user_account SET ${updates.join(
+      ", "
+    )}, updated_at=NOW() WHERE id=$${params.length}`;
+    const r = await pool.query(sql, params);
+    return res.json({ ok: true, updated: r.rowCount });
+  } catch (e) {
+    console.error("PUT /admin/users/:id", e);
+    res.status(500).json({ ok: false, error: "Error actualizando usuario" });
   }
 });
 
-// ==================
-// Buscar cursos por título o descripción
-// ==================
-app.get("/courses/search", authMiddleware, async (req, res) => {
+app.delete("/admin/users/:id", authMiddleware, async (req, res) => {
   try {
-    const q = (req.query.q || "").trim();
-    if (!q) return res.json({ ok: true, results: [] });
+    const me = req.user;
+    const isSuper = (me.role || "").toLowerCase() === "superadmin";
+    if (!isSuper)
+      return res.status(403).json({ ok: false, error: "Solo superadmin" });
+    if (req.params.id === me.sub)
+      return res.status(400).json({ ok: false, error: "No puedes eliminarte" });
 
-    const r = await pool.query(
-      `SELECT id, title, description, created_at
-         FROM course
-        WHERE title ILIKE $1 OR description ILIKE $1
-        ORDER BY created_at DESC
-        LIMIT 50`,
-      [`%${q}%`]
-    );
-
-    res.json({ ok: true, results: r.rows });
-  } catch (err) {
-    console.error("search error:", err);
-    res.status(500).json({ ok: false, error: "Error en búsqueda" });
+    const r = await pool.query(`DELETE FROM user_account WHERE id=$1`, [
+      req.params.id,
+    ]);
+    res.json({ ok: true, deleted: r.rowCount });
+  } catch (e) {
+    console.error("DELETE /admin/users/:id", e);
+    res.status(500).json({ ok: false, error: "Error eliminando usuario" });
   }
 });
 
-// ==================
-// Panel del curso (curso + documentos + videos) - con filename visible
-// ==================
-app.get("/courses/:id/overview", authMiddleware, async (req, res) => {
-  const courseId = req.params.id;
-  try {
-    const courseQ = await pool.query(
-      `SELECT id, title, description, passing_score, created_by, created_at
-         FROM course
-        WHERE id = $1
-        LIMIT 1`,
-      [courseId]
-    );
-    if (courseQ.rowCount === 0) {
-      return res.status(404).json({ ok: false, error: "Curso no encontrado" });
+/* ========== Subidas ==========
+   type: doc | video | avatar | (por defecto: file)
+================================ */
+app.post(
+  "/upload",
+  authMiddleware,
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ ok: false, error: "No se envió archivo" });
+      }
+
+      const type = (req.body.type || "").toLowerCase();
+
+      const webPath =
+        type === "doc"
+          ? `/uploads/docs/${req.file.filename}`
+          : type === "video"
+          ? `/uploads/videos/${req.file.filename}`
+          : type === "avatar"
+          ? `/uploads/avatars/${req.file.filename}`
+          : `/uploads/${req.file.filename}`;
+
+      // Si es avatar, también actualizamos user_account.avatar_uri
+      if (type === "avatar") {
+        try {
+          await pool.query(
+            `UPDATE user_account
+               SET avatar_uri = $1,
+                   updated_at = NOW()
+             WHERE id = $2`,
+            [webPath, req.user.sub]
+          );
+        } catch (e) {
+          console.error("Error actualizando avatar_uri en DB:", e);
+          // No rompemos la subida por esto; sólo lo dejamos logueado.
+        }
+      }
+
+      res.json({
+        ok: true,
+        file: { name: req.file.filename, type: type || "file", path: webPath },
+      });
+    } catch (e) {
+      console.error("POST /upload", e);
+      res.status(500).json({ ok: false, error: "Error al subir archivo" });
     }
-    const course = courseQ.rows[0];
-
-    // === Documentos ===
-    const docsQ = await pool.query(
-      `SELECT ci.id AS content_id,
-              ci.title AS item_title,
-              COALESCE(da.uri,'') AS uri
-         FROM content_item ci
-         LEFT JOIN document_asset da ON da.content_id = ci.id
-        WHERE ci.course_id = $1 AND ci.type = 'document'
-        ORDER BY ci.position NULLS LAST, ci.created_at`,
-      [courseId]
-    );
-
-    // === Videos ===
-    const vidsQ = await pool.query(
-      `SELECT ci.id AS content_id,
-              ci.title AS item_title,
-              COALESCE(ma.uri,'') AS uri,
-              COALESCE(ma.duration_sec,0) AS duration_sec
-         FROM content_item ci
-         LEFT JOIN media_asset ma ON ma.content_id = ci.id
-        WHERE ci.course_id = $1 AND ci.type = 'video'
-        ORDER BY ci.position NULLS LAST, ci.created_at`,
-      [courseId]
-    );
-
-    // Añadir filename a partir de uri
-    const extractFilename = (uri) => {
-      if (!uri) return "";
-      const parts = uri.split("/");
-      return parts[parts.length - 1] || "";
-    };
-
-    const documents = docsQ.rows.map(r => ({
-      content_id: r.content_id,
-      title: r.item_title || extractFilename(r.uri) || "Documento",
-      filename: extractFilename(r.uri),
-      uri: r.uri,
-      progress_percent: 0,
-      status: "pending",
-    }));
-
-    const videos = vidsQ.rows.map(r => ({
-      content_id: r.content_id,
-      title: r.item_title || extractFilename(r.uri) || "Video",
-      filename: extractFilename(r.uri),
-      uri: r.uri,
-      duration_sec: r.duration_sec,
-      progress_percent: 0,
-      status: "pending",
-    }));
-
-    return res.json({
-      ok: true,
-      course,
-      documents,
-      videos,
-      course_status: "in_progress",
-      course_progress_percent: 0,
-    });
-  } catch (err) {
-    console.error("overview error:", err);
-    return res.status(500).json({ ok: false, error: "Error del servidor" });
   }
-});
+);
 
-// ==================
-// Servidor
-// ==================
-app.listen(8000, () => {
-  console.log("Backend corriendo en http://localhost:8000");
+/* ========== Servidor ========== */
+const PORT = Number(process.env.PORT || 8000); // pon PORT=8001 en backend/.env si tu front usa 8001
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Backend corriendo en http://localhost:${PORT}`);
 });

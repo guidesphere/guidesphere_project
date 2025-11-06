@@ -1,6 +1,6 @@
 // src/components/CourseForm.jsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // 👈 IMPORTANTE
+import { useNavigate } from "react-router-dom";
 import "./CourseForm.css";
 import logo from "../assets/logo.png";
 import { createCourse, uploadFile } from "../services/api";
@@ -12,14 +12,17 @@ function CourseForm() {
   const [videos, setVideos] = useState([""]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [saving, setSaving] = useState(false); // ← NUEVO: estado de carga
 
-  const navigate = useNavigate(); // 👈 hook de navegación
+  const navigate = useNavigate();
 
-  const addDocument = () => setDocuments([...documents, ""]);
-  const addVideo = () => setVideos([...videos, ""]);
+  const addDocument = () => setDocuments((docs) => [...docs, ""]);
+  const addVideo = () => setVideos((vids) => [...vids, ""]);
 
   const handleClose = () => {
-    navigate("/admin"); // 👈 redirige al panel de administrador
+    // Ir directo al panel de cursos
+    if (saving) return; // opcional: no dejar salir mientras guarda
+    navigate("/courses/panel");
   };
 
   // Subir archivo
@@ -46,6 +49,7 @@ function CourseForm() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setSaving(true); // ← MOSTRAR popup
 
     try {
       const cleanDocs = documents.filter(Boolean);
@@ -66,26 +70,20 @@ function CourseForm() {
       setVideos([""]);
     } catch (err) {
       setError(err.message || "Error creando curso");
+    } finally {
+      setSaving(false); // ← OCULTAR popup
     }
   };
 
   return (
     <div className="course-container">
-      <div className="course-card" style={{ position: "relative" }}>
-        {/* 👇 Botón cerrar dentro del área */}
+      <div className="course-card">
+        {/* Botón cerrar (X) */}
         <button
           type="button"
           className="btn-close"
           onClick={handleClose}
-          style={{
-            position: "absolute",
-            top: "15px",
-            right: "15px",
-            background: "transparent",
-            border: "none",
-            fontSize: "22px",
-            cursor: "pointer",
-          }}
+          title="Salir al panel de cursos"
         >
           ✖
         </button>
@@ -129,11 +127,15 @@ function CourseForm() {
                   readOnly
                 />
                 <div className="btn-row">
-                  <button type="button" className="btn-small" onClick={addDocument}>
-                    + Agregar documento
+                  <button
+                    type="button"
+                    className="btn-small"
+                    onClick={addDocument}
+                  >
+                    + Documento
                   </button>
                   <label className="btn-small file-btn">
-                    Seleccionar archivo
+                    + Seleccionar
                     <input
                       type="file"
                       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/*"
@@ -155,11 +157,15 @@ function CourseForm() {
                   readOnly
                 />
                 <div className="btn-row">
-                  <button type="button" className="btn-small" onClick={addVideo}>
-                    + Agregar video
+                  <button
+                    type="button"
+                    className="btn-small"
+                    onClick={addVideo}
+                  >
+                    + Video
                   </button>
                   <label className="btn-small file-btn">
-                    Seleccionar archivo
+                    + Seleccionar
                     <input
                       type="file"
                       accept="video/*"
@@ -172,14 +178,32 @@ function CourseForm() {
             ))}
           </div>
 
+          {/* Acciones (Guardar curso) */}
           <div className="register-actions">
-            <button type="submit" className="btn">Guardar curso</button>
+            <button type="submit" className="btn">
+              {saving ? "Guardando curso..." : "Guardar curso"}
+            </button>
           </div>
         </form>
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        {success && <p style={{ color: "green" }}>{success}</p>}
+        {error && <p style={{ color: "red", marginTop: "1rem" }}>{error}</p>}
+        {success && (
+          <p style={{ color: "green", marginTop: "1rem" }}>{success}</p>
+        )}
       </div>
+
+      {/* Popup de carga mientras se guarda el curso */}
+      {saving && (
+        <div className="loading-overlay">
+          <div className="loading-modal">
+            <h3>Guardando curso…</h3>
+            <p>Por favor espera mientras se procesa la información.</p>
+            <div className="loading-bar">
+              <div className="loading-bar-inner" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -162,3 +162,120 @@
   margin-top: 16px;
   display: inline-block;
 }
+
+/* --- Progreso general del curso --- */
+.course-progress-box {
+  margin: 1.5rem auto;
+  max-width: 600px;
+}
+
+.course-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.course-progress-title {
+  font-weight: 700;
+  color: #6518af;
+}
+
+.course-progress-percent {
+  font-weight: 700;
+  color: #6518af;
+}
+
+.course-progress-bar {
+  background: #eee;
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.course-progress-inner {
+  background: #2ECC71;
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.course-progress-pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.course-progress-pill.done {
+  background: #2ECC71;
+  color: #fff;
+}
+.course-progress-pill.in-progress {
+  background: #FFA500;
+  color: #fff;
+}
+.course-progress-pill.not-started {
+  background: #ccc;
+  color: #333;
+}
+
+/* --- Lista de videos / documentos --- */
+.course-items-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.course-item-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.course-item-main {
+  flex: 1;
+}
+
+.course-item-main p {
+  margin: 4px 0 0;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+/* Barra de progreso bajo cada recurso */
+.course-item-progress-bar {
+  margin-top: 6px;
+  background: #e6e6e6;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.course-item-progress-inner {
+  height: 100%;
+  background: #6518af;
+  transition: width 0.4s ease;
+}
+
+/* Botón "Ver" de cada fila */
+.course-item-button {
+  align-self: center;
+  background: #FFA500;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.course-item-button:hover {
+  background: #2ECC71;
+}
