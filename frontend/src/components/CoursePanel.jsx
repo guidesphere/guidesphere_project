@@ -10,9 +10,10 @@ import {
   saveCourseProgress,
   getCourseRatingSummary,
   setCourseRating,
+  CORE_API,
 } from "../services/api";
 
-const BASE_API = "http://127.0.0.1:8001"; // mismo puerto del backend
+const BASE_API = CORE_API; // usamos la misma base que el backend
 
 const buildUrl = (uri) => {
   if (!uri) return "";

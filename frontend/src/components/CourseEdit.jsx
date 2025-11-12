@@ -4,8 +4,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   getCourseOverview,
   updateCourse,
-  uploadFile, // 👈 usamos el mismo /upload que en crear curso
+  uploadFile, // usamos el mismo /upload que en crear curso
 } from "../services/api";
+
 import "./AdminContentManager.css";
 import "./CoursePanel.css";
 import logo from "../assets/logo.png";
@@ -24,6 +25,7 @@ export default function CourseEdit() {
       return null;
     }
   }, []);
+
   const role = (currentUser?.role || "").toLowerCase();
 
   const [title, setTitle] = useState("");
@@ -37,7 +39,9 @@ export default function CourseEdit() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // guard simple: solo profesor / superadmin
+  /* =========================
+     Guard: solo profesor / superadmin
+     ========================= */
   useEffect(() => {
     if (!currentUser) {
       navigate("/login");
@@ -48,7 +52,9 @@ export default function CourseEdit() {
     }
   }, [currentUser, role, navigate]);
 
-  // cargar datos del curso
+  /* =========================
+     Cargar datos del curso
+     ========================= */
   useEffect(() => {
     let alive = true;
 
@@ -61,15 +67,15 @@ export default function CourseEdit() {
 
       setLoading(true);
       setError("");
+
       try {
         const data = await getCourseOverview(courseId);
         if (!alive) return;
 
-        const course = data.course || {};
-
-        setTitle(course.title || "");
-        setDescription(course.description || "");
-        setPassingScore(Number(course.passing_score ?? 60));
+        // getCourseOverview ya devuelve los datos "planos"
+        setTitle(data.title || "");
+        setDescription(data.description || "");
+        setPassingScore(Number(data.passing_score ?? 60));
 
         setVideos(Array.isArray(data.videos) ? data.videos : []);
         setDocuments(Array.isArray(data.documents) ? data.documents : []);
@@ -95,7 +101,7 @@ export default function CourseEdit() {
      Helpers de edición local
      ========================= */
 
-  // videos
+  // Videos
   const changeVideoField = (idx, field, value) => {
     setVideos((prev) =>
       prev.map((v, i) => (i === idx ? { ...v, [field]: value } : v))
@@ -114,7 +120,7 @@ export default function CourseEdit() {
     setVideos((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // documentos
+  // Documentos
   const changeDocField = (idx, field, value) => {
     setDocuments((prev) =>
       prev.map((d, i) => (i === idx ? { ...d, [field]: value } : d))
@@ -134,7 +140,7 @@ export default function CourseEdit() {
   };
 
   /* =========================
-     Subida de archivos (doc/video)
+     Subida de archivos (doc / video)
      ========================= */
 
   const handleDocFilePicked = async (idx, event) => {
@@ -213,6 +219,7 @@ export default function CourseEdit() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!courseId) {
       setError("Id de curso no válido.");
       return;
@@ -225,6 +232,7 @@ export default function CourseEdit() {
 
     setSaving(true);
     setError("");
+
     try {
       await updateCourse(courseId, {
         title: title.trim(),
@@ -233,6 +241,7 @@ export default function CourseEdit() {
         videos,
         documents,
       });
+
       alert("Curso actualizado correctamente.");
       navigate("/courses/panel");
     } catch (e2) {
@@ -283,10 +292,7 @@ export default function CourseEdit() {
           {!loading && !error && (
             <form onSubmit={handleSubmit} style={{ maxWidth: 1100 }}>
               {/* Datos generales */}
-              <div
-                className="course-progress-box"
-                style={{ marginBottom: 24 }}
-              >
+              <div className="course-progress-box" style={{ marginBottom: 24 }}>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ display: "block", fontWeight: 600 }}>
                     Título del curso

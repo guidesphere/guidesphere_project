@@ -29,7 +29,6 @@ export default function CourseCard({ c, role="student", onView, onEdit, onToggle
             <button onClick={()=>onManage?.(c)}>📂 Contenido</button>
             <button onClick={()=>onEdit?.(c)}>✏️ Editar</button>
             <button onClick={()=>onTogglePub?.(c)}>{c.is_published ? "⏸️ Despublicar" : "✅ Publicar"}</button>
-            <button onClick={()=>onDuplicate?.(c)}>📄 Duplicar</button>
             <button onClick={()=>onDelete?.(c)} className="danger">🗑️ Eliminar</button>
           </>
         )}

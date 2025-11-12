@@ -4,16 +4,36 @@ from typing import Optional
 
 from PyPDF2 import PdfReader  # asegúrate de tener PyPDF2 instalado en el venv
 
+# ============================================================
+# Localización robusta de la carpeta de documentos dentro
+# del contenedor Docker de backend_eval
+#
+# Prioridad:
+#   1) EVAL_DOCS_DIR (variable de entorno, si existe)
+#   2) /app/docs                 (montado en docker-compose)
+#   3) /app/uploads/docs         (uploads del backend Node)
+#   4) ruta antigua fuera de docker: ../backend/uploads/docs
+# ============================================================
 
-# Base del proyecto (carpeta "guidesphere")
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+HERE = os.path.abspath(os.path.dirname(__file__))
 
-# Carpeta donde están realmente tus PDFs subidos desde el backend Node:
-#   .../guidesphere/backend/uploads/docs
-DEFAULT_DOCS_DIR = os.path.join(BASE_DIR, "backend", "uploads", "docs")
+CANDIDATE_DIRS = [
+    os.getenv("EVAL_DOCS_DIR"),  # override explícito por entorno
+    os.path.join(HERE, "..", "docs"),  # /app/docs
+    os.path.join(HERE, "..", "uploads", "docs"),  # /app/uploads/docs
+    os.path.abspath(
+        os.path.join(HERE, "..", "..", "backend", "uploads", "docs")
+    ),  # ruta antigua (modo no docker)
+]
 
-# Permite sobreescribirla con una variable de entorno EVAL_DOCS_DIR si quieres
-DOCS_DIR = os.getenv("EVAL_DOCS_DIR", DEFAULT_DOCS_DIR)
+DOCS_DIR: str
+for d in CANDIDATE_DIRS:
+    if d and os.path.isdir(d):
+        DOCS_DIR = d
+        break
+else:
+    # Fallback defensivo: asumimos /app/uploads/docs
+    DOCS_DIR = os.path.join(os.path.abspath(os.path.join(HERE, "..")), "uploads", "docs")
 
 
 def _read_txt(path: str) -> str:

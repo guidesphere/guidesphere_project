@@ -2,11 +2,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import "./AdminContentManager.css";
 import logo from "../assets/logo.png";
-import { uploadAvatar, getCourses } from "../services/api";
+import { uploadAvatar, getCourses, enrollCourse, CORE_API } from "../services/api";
 import { useNavigate } from "react-router-dom";
-
-const API = "http://localhost:8000";
-const CORE_API = "http://127.0.0.1:8001";
 
 // recorta textos largos (para la descripción)
 function shortText(text, max = 80) {
@@ -39,9 +36,11 @@ function AdminContentManager() {
   const [avatarUrl, setAvatarUrl] = useState(
     currentUser?.avatar_uri || "/uploads/avatars/default.png"
   );
+
+  // Usamos la misma URL base del backend que el resto de la app
   const displayAvatar = avatarUrl?.startsWith("http")
     ? avatarUrl
-    : `${API}${avatarUrl}`;
+    : `${CORE_API}${avatarUrl}`;
 
   const handleChooseAvatar = async (e) => {
     try {
@@ -70,8 +69,7 @@ function AdminContentManager() {
 
       setAvatarUrl(finalPath);
 
-      const saved =
-        JSON.parse(localStorage.getItem("user") || "null") || {};
+      const saved = JSON.parse(localStorage.getItem("user") || "null") || {};
       saved.avatar_uri = finalPath;
       localStorage.setItem("user", JSON.stringify(saved));
 
@@ -119,20 +117,13 @@ function AdminContentManager() {
 
   const handleEnroll = async (course) => {
     if (!window.confirm(`¿Deseas inscribirte en "${course.title}"?`)) return;
+
     try {
       setEnrollingId(course.id);
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${CORE_API}/courses/${course.id}/enroll`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok || data.ok === false) {
-        throw new Error(data.error || "No se pudo inscribir en el curso");
-      }
+      // Usamos la función centralizada de la API,
+      // que ya sabe a qué backend llamar y añade headers.
+      await enrollCourse(course.id);
 
       alert("Inscripción realizada correctamente.");
     } catch (e) {

@@ -298,6 +298,165 @@ router.post("/", authRequired, async (req, res) => {
 });
 
 /* ==========================
+   ✏️ ACTUALIZAR CURSO (metadatos + videos + docs)
+   ========================== */
+router.put("/:id", authRequired, async (req, res) => {
+  const courseId = req.params.id;
+  const user = req.user;
+  const isSuper = (user.role || "").toLowerCase() === "superadmin";
+
+  const {
+    title,
+    description,
+    passing_score,
+    documents = [],
+    videos = [],
+  } = req.body || {};
+
+  if (!title || !String(title).trim()) {
+    return res
+      .status(400)
+      .json({ ok: false, error: "El título del curso es obligatorio" });
+  }
+
+  try {
+    await pool.query("BEGIN");
+
+    // 1) Verificar que el curso exista y que el usuario tenga permisos
+    const c = await pool.query(
+      `SELECT id, created_by
+         FROM course
+        WHERE id = $1
+        LIMIT 1`,
+      [courseId]
+    );
+
+    if (c.rowCount === 0) {
+      await pool.query("ROLLBACK");
+      return res
+        .status(404)
+        .json({ ok: false, error: "Curso no encontrado" });
+    }
+
+    const ownerId = c.rows[0].created_by;
+    if (ownerId !== user.sub && !isSuper) {
+      await pool.query("ROLLBACK");
+      return res.status(403).json({
+        ok: false,
+        error: "No tienes permisos para editar este curso",
+      });
+    }
+
+    // 2) Actualizar metadatos del curso
+    const passScore = Number(passing_score || 0);
+
+    await pool.query(
+      `UPDATE course
+          SET title = $1,
+              description = $2,
+              passing_score = $3,
+              updated_at = NOW()
+        WHERE id = $4`,
+      [String(title).trim(), description || null, passScore, courseId]
+    );
+
+    // 3) Limpiar contenidos anteriores (documentos y videos)
+    await pool.query(
+      `DELETE FROM document_asset
+        WHERE content_id IN (
+          SELECT id FROM content_item
+           WHERE course_id = $1 AND type = 'document'
+        );`,
+      [courseId]
+    );
+
+    await pool.query(
+      `DELETE FROM media_asset
+        WHERE content_id IN (
+          SELECT id FROM content_item
+           WHERE course_id = $1 AND type = 'video'
+        );`,
+      [courseId]
+    );
+
+    await pool.query(
+      `DELETE FROM content_item
+        WHERE course_id = $1;`,
+      [courseId]
+    );
+
+    // 4) Volver a insertar documentos y videos según el payload nuevo
+    let position = 1;
+    const created_by = user.sub;
+
+    // Documentos
+    for (const doc of documents || []) {
+      const uri =
+        typeof doc === "string" ? doc : doc && doc.uri ? doc.uri : "";
+      if (!uri) continue;
+
+      const titleDoc = inferTitle(
+        uri,
+        typeof doc === "object" ? doc.title : "",
+        "Documento"
+      );
+
+      const ci = await pool.query(
+        `INSERT INTO content_item
+           (course_id, type, title, description, "position", duration_sec, created_by)
+         VALUES ($1,'document',$2,NULL,$3,NULL,$4)
+         RETURNING id;`,
+        [courseId, titleDoc, position++, created_by]
+      );
+      const contentId = ci.rows[0].id;
+
+      await pool.query(
+        `INSERT INTO document_asset (content_id, source, uri)
+         VALUES ($1,'upload',$2);`,
+        [contentId, uri]
+      );
+    }
+
+    // Videos
+    for (const vid of videos || []) {
+      const uri =
+        typeof vid === "string" ? vid : vid && vid.uri ? vid.uri : "";
+      if (!uri) continue;
+
+      const titleVid = inferTitle(
+        uri,
+        typeof vid === "object" ? vid.title : "",
+        "Video"
+      );
+
+      const ci = await pool.query(
+        `INSERT INTO content_item
+           (course_id, type, title, description, "position", duration_sec, created_by)
+         VALUES ($1,'video',$2,NULL,$3,NULL,$4)
+         RETURNING id;`,
+        [courseId, titleVid, position++, created_by]
+      );
+      const contentId = ci.rows[0].id;
+
+      await pool.query(
+        `INSERT INTO media_asset (content_id, source, uri, duration_sec)
+         VALUES ($1,'upload',$2,0);`,
+        [contentId, uri]
+      );
+    }
+
+    await pool.query("COMMIT");
+    return res.json({ ok: true, id: courseId });
+  } catch (err) {
+    await pool.query("ROLLBACK").catch(() => {});
+    console.error("PUT /courses/:id", err);
+    return res
+      .status(500)
+      .json({ ok: false, error: "Error actualizando curso" });
+  }
+});
+
+/* ==========================
    🟢 PUBLICAR / DESPUBLICAR
    ========================== */
 router.patch("/:id/publish", authRequired, async (req, res) => {
@@ -525,7 +684,7 @@ router.post("/:id/enroll", authRequired, async (req, res) => {
     await pool.query(
       `INSERT INTO enrollment(course_id, user_id)
        VALUES ($1, $2)
-       ON CONFLICT ON CONSTRAINT enrollment_course_id_user_id_key DO NOTHING;`,
+       ON CONFLICT (course_id, user_id) DO NOTHING;`,
       [courseId, userId]
     );
 

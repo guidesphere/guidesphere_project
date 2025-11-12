@@ -1,5 +1,6 @@
 # backend_eval/routers/exam_from_video.py
 import os
+import shutil
 from typing import Optional
 
 import asyncpg
@@ -35,7 +36,7 @@ async def create_exam_from_video(
     Flujo:
       1) Verifica que el content_id exista y sea video.
       2) Busca el media_asset para obtener la URI del archivo.
-      3) Construye la ruta absoluta al .mp4 (u otro formato).
+      3) Copia el archivo real desde /uploads/... a VIDEOS_DIR si es necesario.
       4) Transcribe el audio con Whisper (creando/leyendo el .txt).
       5) Si el texto es suficiente, genera preguntas y guarda el quiz.
     """
@@ -68,10 +69,26 @@ async def create_exam_from_video(
     finally:
         await conn.close()
 
-    # --- 3) Construir la ruta absoluta al archivo de video ---
-    # Nos quedamos solo con el nombre del archivo
-    base_name = os.path.basename(video_uri)  # -> 1762271911802.mp4
+    # --- 3) Localizar/corregir la ruta al archivo de video ---
+    # El backend core guarda el archivo bajo /uploads/..., así que
+    # construimos la ruta real dentro del contenedor.
+    source_path = os.path.join("/app", video_uri.lstrip("/"))
+
+    if not os.path.exists(source_path):
+        # El frontend interpreta 404 como "video 404"
+        raise HTTPException(
+            status_code=404,
+            detail=f"Video no encontrado en {source_path}.",
+        )
+
+    # Aseguramos que el archivo también exista en VIDEOS_DIR, que es donde
+    # el servicio de transcripción espera encontrarlo.
+    os.makedirs(VIDEOS_DIR, exist_ok=True)
+    base_name = os.path.basename(source_path)  # 1762271911802.mp4
     video_path = os.path.join(VIDEOS_DIR, base_name)
+
+    if not os.path.exists(video_path):
+        shutil.copyfile(source_path, video_path)
 
     # --- 4) Transcribir con Whisper (si hace falta) ---
     try:

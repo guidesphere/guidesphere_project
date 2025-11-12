@@ -1,24 +1,23 @@
 // src/components/CoursesPanel.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  getCourses,
-  publishCourse,
-  deleteCourse,
-} from "../services/api";
+import { getCourses, publishCourse, deleteCourse } from "../services/api";
 import CourseCard from "./CourseCard";
 import "./CoursesPanel.css";
 
-const PAGE_SIZE = 6; // 👈 2 columnas x 3 filas
+const PAGE_SIZE = 6; // 2 columnas x 3 filas
 
 export default function CoursesPanel() {
   const navigate = useNavigate();
 
+  // Usuario actual
   const me = useMemo(
     () => JSON.parse(localStorage.getItem("user") || "null"),
     []
   );
   const role = (me?.role || "").toLowerCase();
+
+  // superadmin ve todos, profesor solo los suyos
   const scope = role === "superadmin" ? "all" : "mine";
 
   const [q, setQ] = useState("");
@@ -28,8 +27,7 @@ export default function CoursesPanel() {
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0); // fuerza recarga tras acciones
 
-  // Cargar TODOS los cursos de ese scope y query,
-  // y paginar en el frontend con PAGE_SIZE = 6
+  // Cargar cursos del scope y query, y paginar en frontend
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -38,12 +36,12 @@ export default function CoursesPanel() {
           scope,
           page: 1,
           q,
-          pageSize: 1000, // 👈 traemos “muchos” y paginamos nosotros
+          pageSize: 1000, // traemos “muchos” y paginamos nosotros
         });
         const list = d.courses || [];
         setItems(list);
         setTotal(list.length);
-        setPage(1); // siempre empezamos en la primera página al cambiar filtro
+        setPage(1); // siempre volver a página 1 al cambiar filtro
       } catch (e) {
         console.error(e);
         setItems([]);
@@ -76,7 +74,7 @@ export default function CoursesPanel() {
     navigate(`/admin/course/${c.id}`, { state: { course: c } });
   };
 
-  // ✏️ Editar metadatos y contenidos (nueva vista de edición)
+  // ✏️ Edición completa (metadatos + contenidos)
   const onEdit = (c) => {
     navigate(`/courses/${c.id}/edit`);
   };
@@ -86,12 +84,9 @@ export default function CoursesPanel() {
       await publishCourse(c.id, !c.is_published);
       setReload((x) => x + 1);
     } catch (e) {
-      alert(e.message || "Error al publicar");
+      alert(e.message || "Error al cambiar estado de publicación");
     }
   };
-
-  const onDuplicate = (c) =>
-    alert(`Duplicar ${c.title} (pendiente endpoint backend)`);
 
   const onDelete = async (c) => {
     if (!window.confirm(`¿Eliminar "${c.title}"?`)) return;
@@ -99,17 +94,17 @@ export default function CoursesPanel() {
       await deleteCourse(c.id);
       setReload((x) => x + 1);
     } catch (e) {
-      alert(e.message || "Error eliminando");
+      alert(e.message || "Error eliminando curso");
     }
   };
 
   const handleSearchSubmit = (evt) => {
     evt.preventDefault();
-    setPage(1); // ya se recarga solo por el cambio en q
+    setPage(1); // el efecto ya recarga por cambio en q
   };
 
   const handleExit = () => {
-    // 👈 salir al gestor de contenido (para profesor y superadmin)
+    // salir al gestor de contenido
     navigate("/admin");
   };
 
@@ -159,7 +154,6 @@ export default function CoursesPanel() {
                 onManage={onManage}
                 onEdit={onEdit}
                 onTogglePub={onTogglePub}
-                onDuplicate={onDuplicate}
                 onDelete={onDelete}
               />
             ))}

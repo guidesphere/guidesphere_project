@@ -2,12 +2,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { EVAL_API } from "../services/api";
 
+// === Helper para leer el usuario actual (igual que en MyCertificates) ===
+function getCurrentUser() {
+  try {
+    const raw =
+      localStorage.getItem("user") ||
+      localStorage.getItem("currentUser") ||
+      localStorage.getItem("authUser");
+
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== "object") return null;
+
+    const id =
+      obj.id || obj.user_id || obj.userId || obj.uid || obj.uuid || null;
+    const email = obj.email || obj.username || obj.name || "";
+
+    if (!id) return null;
+    return { id, email };
+  } catch {
+    return null;
+  }
+}
+
 // Usamos la misma URL que el resto del frontend
 const API_EVAL = EVAL_API;
-
-// 🔹 Por ahora, userId fijo para pruebas de certificados (estudiante4@demo.com)
-// Más adelante esto debe venir del estado de autenticación del frontend.
-const DEMO_USER_ID = "904fe67e-8c34-49f9-ad76-3a0bc52e6277";
 
 export default function ExamViewer() {
   const [data, setData] = useState(null);
@@ -15,6 +34,9 @@ export default function ExamViewer() {
   const [result, setResult] = useState(null);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Usuario actual real (mismo helper que usa MyCertificates)
+  const currentUser = useMemo(() => getCurrentUser(), []);
 
   const qs = useMemo(() => new URLSearchParams(window.location.search), []);
   const contentId = qs.get("contentId") || "";
@@ -121,13 +143,21 @@ export default function ExamViewer() {
       setErr("");
       setResult(null);
 
-      const userId = DEMO_USER_ID; // en el futuro: traer del estado global/ auth
-
+      // Leer el usuario real desde el LocalStorage
+      const me = JSON.parse(localStorage.getItem("user") || "null");
+      
+      if (!me || !me.id) {
+      throw new Error(
+        "No se encontró el usuario actual. Inicia sesión de nuevo antes de presentar el examen."
+      );
+    }
+      const userId = me.id;
+      
       const r = await fetch(`${API_EVAL}/exam/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // 👇 clave para que el backend pueda registrar intento + certificado
+          // clave para que el backend pueda registrar intento + certificado
           "X-User-Id": userId,
         },
         body: JSON.stringify({

@@ -1,4 +1,6 @@
 # backend_eval/routers/exam_from_document.py
+import os
+import shutil
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Dict
@@ -72,13 +74,59 @@ async def create_exam_from_document(
                 detail="No hay documento asociado a este contenido.",
             )
 
-        # 2) Extraer texto del documento (doc_id viene del fileId: 1762199478782)
+        # 2) Localizar el archivo físico del documento
+        #    Antes de dockerizar, el core lo grababa en /docs o /uploads;
+        #    ahora probamos todas las variantes razonables.
+        docs_dir = "/app/docs"
+        os.makedirs(docs_dir, exist_ok=True)
+
+        candidate_paths: List[str] = []
+
+        # a) Ruta tal y como viene en la columna uri (ej: /uploads/docs/xxxxx.pdf o /docs/xxxxx.pdf)
+        candidate_paths.append(os.path.join("/app", doc_uri.lstrip("/")))
+
+        # b) Si uri fuera relativo
+        if not doc_uri.startswith("/"):
+            candidate_paths.append(os.path.join(docs_dir, doc_uri))
+
+        # c) Rutas típicas por doc_id y extensión
+        for ext in [".pdf", ".docx", ".doc"]:
+            candidate_paths.append(os.path.join(docs_dir, f"{doc_id}{ext}"))
+            candidate_paths.append(os.path.join("/app/uploads", f"{doc_id}{ext}"))
+            candidate_paths.append(os.path.join("/app/uploads/docs", f"{doc_id}{ext}"))
+
+        source_path = None
+        for p in candidate_paths:
+            if os.path.exists(p):
+                source_path = p
+                break
+
+        if not source_path:
+            # Error real: no encontramos el documento en ninguna ruta razonable
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Documento no encontrado para doc_id={doc_id}. "
+                    f"Probadas rutas: {', '.join(sorted(set(candidate_paths)))}"
+                ),
+            )
+
+        # 3) Copiarlo a /app/docs con nombre doc_id.ext, que es lo que usa doc_reader
+        _, ext = os.path.splitext(source_path)
+        if not ext:
+            ext = ".pdf"
+        dest_path = os.path.join(docs_dir, f"{doc_id}{ext}")
+
+        if not os.path.exists(dest_path):
+            shutil.copyfile(source_path, dest_path)
+
+        # 4) Extraer texto del documento (doc_reader mira en /app/docs/doc_id.ext)
         try:
             text = await get_text_from_document(doc_id)
         except FileNotFoundError:
             raise HTTPException(
                 status_code=404,
-                detail=f"Documento no encontrado para doc_id={doc_id}.",
+                detail=f"Documento no encontrado para doc_id={doc_id} en {dest_path}.",
             )
         except Exception as e:
             # Cualquier error específico del lector se considera 422 (input inválido)
@@ -96,10 +144,10 @@ async def create_exam_from_document(
                 ),
             )
 
-        # 3) Generar preguntas con el servicio de IA
+        # 5) Generar preguntas con el servicio de IA
         gen = await generate_questions(text=text, count=count)
 
-        # 4) Guardar el quiz ligado al content_item (documento)
+        # 6) Guardar el quiz ligado al content_item (documento)
         quiz_id = await save_generated_quiz(
             source_doc_id=doc_id,
             title=f"Auto-quiz documento {doc_id}",
